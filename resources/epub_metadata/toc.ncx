@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN" "http://www.daisy.org/z3986/2005/ncx-2005-1.dtd">
+<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" xmlns:fo="http://www.w3.org/1999/XSL/Format" xmlns:fb="http://www.gribuser.ru/xml/fictionbook/2.0" xmlns:xlink="http://www.w3.org/1999/xlink" version="2005-1">
+    <docTitle>
+        <text>-</text>
+    </docTitle>
+    <navMap>
+        <navPoint id="0000000001" playOrder="1">
+            <navLabel>
+                <text>—</text>
+            </navLabel>
+            <content src="0000000001.html"/>
+        </navPoint>
+    </navMap>
+</ncx>

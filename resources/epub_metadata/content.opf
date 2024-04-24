@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" xmlns:fo="http://www.w3.org/1999/XSL/Format" xmlns:fb="http://www.gribuser.ru/xml/fictionbook/2.0" xmlns:opf="http://www.idpf.org/2007/opf" xmlns:xlink="http://www.w3.org/1999/xlink" unique-identifier="deadbeef" version="2.0">
+    <metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+        <dc:title>book</dc:title>
+        <dc:subject>-</dc:subject>
+        <dc:identifier id="deadbeef" opf:scheme="ID">deadbeef</dc:identifier>
+        <dc:language>ru</dc:language>
+        <dc:description>-</dc:description>
+        <meta name="cover" content="coverimage"/>
+    </metadata>
+    <manifest>
+        <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
+        <item id="css" href="style/read_book.css" media-type="text/css"/>
+        <!-- A -->
+    </manifest>
+    <spine toc="ncx">
+        <!-- B -->
+    </spine>
+    <guide>
+        <reference type="text" href="0000000001.html" title="Text"/>
+    </guide>
+</package>
