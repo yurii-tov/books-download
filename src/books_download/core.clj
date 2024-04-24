@@ -1,4 +1,5 @@
 (ns books-download.core
+  (:import java.util.Base64)
   (:require [clojure.java.io :as io]
             [clojure.string :as cstr]
             [clojure.java.shell :as sh]
@@ -30,6 +31,24 @@
   (cstr/replace x (str site "/") ""))
 
 
+(defn download-asset [link]
+  (open-url link)
+  (if (seq (find-elements (css "img")))
+    (.decode (Base64/getDecoder)
+             (execute-javascript
+              "function getBase64Image(img) {
+                   var canvas = document.createElement('canvas');
+                   canvas.width = img.width;
+                   canvas.height = img.height;
+                   var ctx = canvas.getContext('2d');
+                   ctx.drawImage(img, 0, 0);
+                   var dataURL = canvas.toDataURL('image/png');
+                   return dataURL.replace(/^data:image\\/(png|jpg);base64,/, '');
+               };
+               return getBase64Image(document.querySelector('img'))"))
+    (.getBytes (element-text (find-element (css "body"))) "utf-8")))
+
+
 (defn download-page [book-id page-id out-dir]
   (let [url (format "%s/read_book.php?id=%s&p=%s" site book-id page-id)
         out-file (io/file out-dir (format "%010d.html" page-id))]
@@ -49,8 +68,7 @@
               :let [f (io/file out-dir (cut-site x))]
               :when (not (.exists f))]
         (io/make-parents f)
-        (with-open [s (io/input-stream x)]
-          (io/copy s f)))
+        (io/copy (download-asset x) f))
       (spit out-file (format template page-id stylesheet-links page-raw)))))
 
 
@@ -89,7 +107,8 @@
      (io/make-parents (io/file out-dir "."))
      (println (format "Downloading book (%s pages)..." pages-count))
      (dotimes [i pages-count]
-       (download-page book-id (inc i) out-dir))
+       (download-page book-id (inc i) out-dir)
+       (println (format "  Page %d/%d" (inc i) pages-count)))
      (println "Packing .epub...")
      (convert-to-epub out-dir out-file)
      (->> out-dir file-seq reverse (map (memfn delete)) dorun)))
