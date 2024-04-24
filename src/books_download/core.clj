@@ -56,6 +56,28 @@
 
 (defn convert-to-epub [book-dir out-file]
   (let [epub-temp-out-file (io/file book-dir "book.epub")]
+    (doseq [x ["META-INF/container.xml"
+               "content.opf"
+               "mimetype"
+               "toc.ncx"]
+            :let [f (io/file book-dir x)
+                  r (io/resource (str "epub_metadata/" (.getName f)))]]
+      (io/make-parents f)
+      (with-open [s (io/input-stream r)]
+        (io/copy s f)))
+    (let [pages (sort (for [x (file-seq book-dir)
+                            :when (cstr/ends-with? x ".html")]
+                        (cstr/replace (.getName x) ".html" "")))
+          [a b] (for [s ["<item id=\"%1$s\" href=\"%1$s.html\" media-type=\"application/xhtml+xml\"/>"
+                         "<itemref idref=\"%s\" linear=\"yes\"/>"]]
+                  (->> pages
+                       (map (partial format s))
+                       (cstr/join "\n")))
+          content (io/file book-dir "content.opf")]
+      (as-> (slurp content) x
+        (cstr/replace x "<!-- A -->" a)
+        (cstr/replace x "<!-- B -->" b)
+        (spit content x)))
     (sh/with-sh-dir book-dir (sh/sh "zip" "-qr" (.getName epub-temp-out-file) "."))
     (io/copy epub-temp-out-file (io/file out-file))
     (io/delete-file epub-temp-out-file)))

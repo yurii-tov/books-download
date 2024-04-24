@@ -16,7 +16,4 @@
     <spine toc="ncx">
         <!-- B -->
     </spine>
-    <guide>
-        <reference type="text" href="0000000001.html" title="Text"/>
-    </guide>
 </package>
