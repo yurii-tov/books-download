@@ -31,6 +31,36 @@
   (cstr/replace x (str site "/") ""))
 
 
+(defn add-footnotes [book-dir]
+  (let [htmls (filter (fn [x] (cstr/ends-with? x ".html"))
+                      (file-seq (io/file book-dir)))
+        last-page (last htmls)
+        footnotes (for [s (map slurp htmls)
+                        m (re-seq #"(?s)<a href=.notes.php.*?[^ ] target.*? title=.(.*?).>\[(\d+)\]</a>" s)]
+                    (map cstr/trim m))
+        footnotes-html (format "<h1>Footnotes</h1>\n<ol>\n%s\n</ol>"
+                               (cstr/join
+                                "\n"
+                                (map (fn [[_ footnote id]]
+                                       (format "<li id=\"footnote_%s\">\n%s\n</li>"
+                                               id footnote))
+                                     footnotes)))]
+    (doseq [x htmls]
+      (spit x
+            (-> x slurp
+                (cstr/replace
+                 #"href=.notes.php.id=\d+#(\d+)."
+                 (format "href=\"%s#footnote_$1\""
+                         (.getName last-page))))))
+    (spit last-page
+          (-> last-page
+              slurp
+              (cstr/replace
+               "</html>"
+               (format "\n%s\n</html>"
+                       footnotes-html))))))
+
+
 (defn download-asset [link]
   (open-url link)
   (if (seq (find-elements (css "img")))
@@ -109,6 +139,8 @@
      (dotimes [i pages-count]
        (download-page book-id (inc i) out-dir)
        (println (format "  Page %d/%d" (inc i) pages-count)))
+     (println "Creating footnotes...")
+     (add-footnotes out-dir)
      (println "Packing .epub...")
      (convert-to-epub out-dir out-file)
      (->> out-dir file-seq reverse (map (memfn delete)) dorun)))
