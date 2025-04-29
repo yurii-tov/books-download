@@ -56,8 +56,8 @@
           (-> last-page
               slurp
               (cstr/replace
-               "</html>"
-               (format "\n%s\n</html>"
+               "</body>"
+               (format "\n%s\n</body>"
                        footnotes-html))))))
 
 
