@@ -15,13 +15,14 @@
                       (element-attribute x "href")]))))
 
 
-(comment
-  ;; example
+(defn download
+  "Downloads books (see `grab-books`) to given folder"
+  [books path]
   (doseq [[n link] books]
     (println n link)
     (open-url link)
-    (spit (str "c:/Users/jurys/Downloads/chekhov/" n ".txt")
-          (-> "div[align=justify]"
+    (spit (io/file path (str n ".txt"))
+          (-> "div[align=justify], body"
               css
               find-element
               element-text))))
