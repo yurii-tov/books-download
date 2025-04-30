@@ -58,7 +58,8 @@
               (cstr/replace
                "</body>"
                (format "\n%s\n</body>"
-                       footnotes-html))))))
+                       footnotes-html))))
+    (count footnotes)))
 
 
 (defn download-asset [link]
@@ -139,8 +140,7 @@
      (dotimes [i pages-count]
        (download-page book-id (inc i) out-dir)
        (println (format "  Page %d/%d" (inc i) pages-count)))
-     (println "Creating footnotes...")
-     (add-footnotes out-dir)
+     (println "Footnotes added:" (add-footnotes out-dir))
      (println "Packing .epub...")
      (convert-to-epub out-dir out-file)
      (->> out-dir file-seq reverse (map (memfn delete)) dorun)))
