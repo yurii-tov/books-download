@@ -141,7 +141,7 @@
        (download-page book-id (inc i) out-dir)
        (println (format "  Page %d/%d" (inc i) pages-count)))
      (println "Footnotes added:" (add-footnotes out-dir))
-     (println "Packing .epub...")
+     (println "Packing:" out-file)
      (convert-to-epub out-dir out-file)
      (->> out-dir file-seq reverse (map (memfn delete)) dorun)))
   ([book-id out-file]
