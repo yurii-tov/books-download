@@ -9,4 +9,6 @@
        (start-driver {:browser :firefox :prefs {"network.proxy.type" 1 "network.proxy.socks" "localhost" "network.proxy.socks_port" 9999 "network.proxy.socks_version" 5}})
      #+end_src
   4. Download a book!
-     (download-book 92417 "c:/Users/jurys/Downloads/sunzi.epub")
+     #+begin_src clojure
+       (download-book 92417 "c:/Users/jurys/Downloads/sunzi.epub")
+     #+end_src
