@@ -1,6 +1,8 @@
 * Example usage
   1. Start proxy
-     ssh -NvD localhost:9999 nexus
+     #+begin_src bash
+       ssh -NvD localhost:9999 nexus
+     #+end_src
   2. Start project REPL
   3. Start browser
      #+begin_src clojure
