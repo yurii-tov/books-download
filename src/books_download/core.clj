@@ -89,7 +89,9 @@
     (let [page-element (find-element (css ".textBook"))
           images (map (fn [x] (element-attribute x "src"))
                       (find-elements page-element (css "img")))
-          stylesheets (map (fn [x] (element-attribute x "href"))
+          stylesheets (map (fn [x] (-> x
+                                       (element-attribute "href")
+                                       (cstr/replace #"\?.*$" "")))
                            (find-elements (css "link[rel=stylesheet]")))
           stylesheet-links (cstr/join "\n" (map (comp (partial format "<link type=\"text/css\" rel=\"stylesheet\" href=\"%s\">")
                                                       cut-site)
