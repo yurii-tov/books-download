@@ -6,7 +6,7 @@
             [selenium.core :refer :all]))
 
 
-(def site "http://loveread.me")
+(def site "https://loveread.me")
 
 
 (def template "<!DOCTYPE html>
