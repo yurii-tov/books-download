@@ -3,6 +3,7 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as cstr]
             [clojure.java.shell :as sh]
+            [books-download.toc :as toc]
             [selenium.core :refer :all]))
 
 
@@ -105,37 +106,62 @@
       (spit out-file (format template page-id stylesheet-links page-raw)))))
 
 
-(defn convert-to-epub [book-dir out-file]
-  (let [epub-temp-out-file (io/file book-dir "book.epub")]
-    (doseq [x ["META-INF/container.xml"
-               "content.opf"
-               "mimetype"
-               "toc.ncx"]
-            :let [f (io/file book-dir x)
-                  r (io/resource (str "epub_metadata/" (.getName f)))]]
-      (io/make-parents f)
-      (with-open [s (io/input-stream r)]
-        (io/copy s f)))
-    (let [pages (sort (for [x (file-seq book-dir)
-                            :when (cstr/ends-with? x ".html")]
-                        (cstr/replace (.getName x) ".html" "")))
-          [a b] (for [s ["<item id=\"%1$s\" href=\"%1$s.html\" media-type=\"application/xhtml+xml\"/>"
-                         "<itemref idref=\"%s\" linear=\"yes\"/>"]]
-                  (->> pages
-                       (map (partial format s))
-                       (cstr/join "\n")))
-          content (io/file book-dir "content.opf")]
-      (as-> (slurp content) x
-        (cstr/replace x "<!-- A -->" a)
-        (cstr/replace x "<!-- B -->" b)
-        (spit content x)))
-    (sh/with-sh-dir book-dir (sh/sh "zip" "-qr" (.getName epub-temp-out-file) "."))
-    (io/copy epub-temp-out-file (io/file out-file))
-    (io/delete-file epub-temp-out-file)))
+(defn convert-to-epub
+  ([book-dir out-file] (convert-to-epub book-dir out-file nil))
+  ([book-dir out-file chapters]
+   (let [epub-temp-out-file (io/file book-dir "book.epub")]
+     (doseq [x ["META-INF/container.xml"
+                "content.opf"
+                "mimetype"
+                "toc.ncx"]
+             :let [f (io/file book-dir x)
+                   r (io/resource (str "epub_metadata/" (.getName f)))]]
+       (io/make-parents f)
+       (with-open [s (io/input-stream r)]
+         (io/copy s f)))
+     (let [pages (sort (for [x (file-seq book-dir)
+                             :when (cstr/ends-with? x ".html")]
+                         (cstr/replace (.getName x) ".html" "")))
+           [a b] (for [s ["<item id=\"%1$s\" href=\"%1$s.html\" media-type=\"application/xhtml+xml\"/>"
+                          "<itemref idref=\"%s\" linear=\"yes\"/>"]]
+                   (->> pages
+                        (map (partial format s))
+                        (cstr/join "\n")))
+           content (io/file book-dir "content.opf")]
+       (as-> (slurp content) x
+         (cstr/replace x "<!-- A -->" a)
+         (cstr/replace x "<!-- B -->" b)
+         (spit content x)))
+     (let [chapters (toc/write-ncx book-dir chapters)]
+       (sh/with-sh-dir book-dir (sh/sh "zip" "-qr" (.getName epub-temp-out-file) "."))
+       (io/copy epub-temp-out-file (io/file out-file))
+       (io/delete-file epub-temp-out-file)
+       chapters))))
+
+
+(defn toc-of-book
+  "The book's own table of contents, as listed by the site's contents page."
+  [book-id]
+  (open-url (format "%s/contents.php?id=%s" site book-id))
+  (-> (find-element (css "body"))
+      element-inner-html
+      toc/contents-toc))
+
+
+(defn- site-toc
+  "`toc-of-book`, but a missing table of contents is not an error: the
+  downloaded pages get scanned for chapter headings instead."
+  [book-id]
+  (try
+    (toc-of-book book-id)
+    (catch Exception e
+      (println "Table of contents not available:" (.getMessage e))
+      nil)))
 
 
 (defn download-book
-  ([book-id pages-count out-file]
+  ([book-id pages-count out-file] (download-book book-id pages-count out-file nil))
+  ([book-id pages-count out-file chapters]
    (let [out-dir (io/file (str book-id "_" (System/currentTimeMillis)))]
      (io/make-parents (io/file out-dir "."))
      (println (format "Downloading book (%s pages)..." pages-count))
@@ -144,14 +170,26 @@
        (println (format "  Page %d/%d" (inc i) pages-count)))
      (println "Footnotes added:" (add-footnotes out-dir))
      (println "Packing:" out-file)
-     (convert-to-epub out-dir out-file)
+     (println "Chapters:" (count (convert-to-epub out-dir out-file chapters)))
      (->> out-dir file-seq reverse (map (memfn delete)) dorun)))
   ([book-id out-file]
    (open-url (format "%s/read_book.php?id=%s&p=1" site book-id))
+   ;; the page count must be read off the first page of the book, before the
+   ;; browser is sent to the contents page
    (let [pages-count (->> (find-elements (css ".navigation a"))
                           (map (fn [x] (->> (element-attribute x "href")
                                             (re-find #"p=(\d+)")
                                             second
                                             read-string)))
-                          (apply max))]
-     (download-book book-id pages-count out-file))))
+                          (apply max))
+         chapters (site-toc book-id)]
+     (download-book book-id pages-count out-file chapters))))
+
+
+(defn book-toc
+  "Prints and returns the table of contents of a book.
+
+  `source` is a book id (the table of contents is fetched from the site), a
+  downloaded book directory, a chapter html file, or a string of html."
+  [source]
+  (toc/print-toc (if (number? source) (toc-of-book source) source)))

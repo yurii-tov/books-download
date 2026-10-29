@@ -15,3 +15,49 @@
      #+begin_src clojure
        (download-book 92417 "c:/Users/jurys/Downloads/sunzi.epub")
      #+end_src
+
+* Table of contents
+  The chapters come from the site's own contents page,
+  =contents.php?id=<book id>=, which lists every chapter title together with the
+  page and anchor it starts at:
+
+  #+begin_src html
+    <ul class="book-chapters">
+    <li><a href="read_book.php?id=15497&p=2#gl_3">III</a></li>
+    ...
+  #+end_src
+
+  =download-book= fetches it once and passes it to =convert-to-epub=, so the
+  epub ships with a real navigation document instead of the single placeholder
+  entry it used to have (and prints how many chapters it found).
+
+  Books without a contents page fall back to reading the chapter headings out of
+  the downloaded pages; both markups the site has used are understood
+
+  #+begin_src html
+    <a name="gl_7"></a><div class="take_h1">Title</div>   ;; old, take_hN = depth
+    <div id="chapter-7" class="book-title">Title</div>     ;; current
+  #+end_src
+
+  Everything lives in the =books-download.toc= namespace; =book-toc= (in
+  =books-download.core=) also takes a book id and fetches it from the site.
+
+  #+begin_src clojure
+    ;; print the chapters of a book from the site
+    (book-toc 15497)
+    ;; 1. I  ->  0000000001.html#gl_1
+    ;; 1. II  ->  0000000001.html#gl_2
+    ;; ...
+
+    ;; ...or of pages already downloaded (directory, single page, html string)
+    (book-toc "target/15497_1714039125671")
+
+    (toc/extract-toc "target/15497_1714039125671")
+    ;; [{:level 1, :title "I", :anchor "gl_1", :page "0000000001"} ...]
+
+    (toc/contents-toc (slurp "contents.html"))  ;; parse a saved contents page
+    (toc/write-ncx "target/15497_1714039125671") ;; rewrite a directory's toc.ncx
+  #+end_src
+
+  =:level= is the depth of the heading (=take_h1= -> 1, =take_h2= -> 2, ...);
+  sub-chapters are nested inside their chapter in the ncx.

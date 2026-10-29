@@ -5,11 +5,6 @@
         <text>-</text>
     </docTitle>
     <navMap>
-        <navPoint id="0000000001" playOrder="1">
-            <navLabel>
-                <text>—</text>
-            </navLabel>
-            <content src="0000000001.html"/>
-        </navPoint>
+        <!-- C -->
     </navMap>
 </ncx>
