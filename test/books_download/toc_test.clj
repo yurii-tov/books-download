@@ -201,8 +201,8 @@
     (testing "a book without a contents page yields nil, not []"
       (is (nil? (toc/contents-toc "<html><body>no contents here</body></html>"))))
 
-    (testing "an empty list is an empty table of contents"
-      (is (= [] (toc/contents-toc "<ul class=\"book-chapters\"></ul>"))))))
+    (testing "an empty list is no table of contents either"
+      (is (nil? (toc/contents-toc "<ul class=\"book-chapters\"></ul>"))))))
 
 
 (deftest write-ncx-uses-the-given-toc
@@ -221,3 +221,39 @@
     (testing "an empty toc falls back to scanning the pages"
       (let [xml (do (toc/write-ncx dir []) (slurp (io/file dir "toc.ncx")))]
         (is (cstr/includes? xml "<text>Chapter &amp; One</text>"))))))
+
+(defn- dom-contents
+  "Chapter links wrapped the way contents.php wraps them."
+  [links]
+  (str "<ul class=\"book-chapters\">" links "</ul>"))
+
+
+(deftest contents-page-as-the-browser-serialises-it
+  (testing "the scraper sees the serialised DOM, where & in hrefs is &amp;"
+    (is (= [{:level 1 :title "Предисловие" :page "0000000001" :anchor "gl_1"}
+            {:level 1 :title "Глава 1. Страна" :page "0000000012" :anchor "gl_2"}]
+           (toc/contents-toc
+            (dom-contents (str "<li><a href=\"read_book.php?id=45501&amp;p=1#gl_1\">Предисловие</a></li>"
+                               "<li><a href=\"read_book.php?id=45501&amp;p=12#gl_2\">Глава 1. Страна</a></li>"))))))
+
+  (testing "a list without page numbers is no table of contents at all"
+    (is (nil? (toc/contents-toc
+               (dom-contents "<li><a href=\"read_book.php?id=1#gl_1\">I</a></li>")))))
+
+  (testing "every rendered entry carries a file name"
+    (let [xml (toc/ncx-nav-map
+               (toc/contents-toc
+                (dom-contents "<li><a href=\"read_book.php?id=1&amp;p=7#gl_9\">I</a></li>")))]
+      (is (not (cstr/includes? xml "src=\"#")))
+      (is (cstr/includes? xml "<content src=\"0000000007.html#gl_9\"/>")))))
+
+
+(deftest unusable-contents-means-scanning-the-pages
+  (let [dir (tmp-dir)
+        toc (toc/contents-toc
+             (dom-contents "<li><a href=\"read_book.php?id=1#gl_1\">I</a></li>"))]
+    (write-page dir "0000000001.html" chapter-html)
+    (spit (io/file dir "toc.ncx") "<ncx><navMap><!-- C --></navMap></ncx>")
+    (is (nil? toc) "without page numbers there is nothing to link to")
+    (toc/write-ncx dir toc)
+    (is (cstr/includes? (slurp (io/file dir "toc.ncx")) "<text>Chapter &amp; One</text>"))))

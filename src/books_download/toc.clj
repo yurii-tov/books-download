@@ -163,14 +163,21 @@
   downloaded page file names (\"0000000001\")."
   [html]
   (when-let [block (second (re-find chapters-pattern (str html)))]
-    (vec (for [[_ href title] (re-seq link-pattern block)
-               :let [page (second (re-find #"[?&]p=(\d+)" href))
-                     anchor (second (re-find #"#([^\"'&\s]+)" href))
-                     title (strip-tags title)]]
-           {:level 1
-            :title (if (cstr/blank? title) "-" title)
-            :page (when page (format "%010d" (Integer/parseInt page)))
-            :anchor anchor}))))
+    (let [entries (vec (for [[_ href title] (re-seq link-pattern block)
+                             ;; the scraper reads the serialised DOM, where `&`
+                             ;; in an attribute is escaped: id=1&amp;p=2#gl_2
+                             :let [href (unescape-entities href)
+                                   page (second (re-find #"[?&]p=(\d+)" href))
+                                   anchor (second (re-find #"#([^\"'&\s]+)" href))
+                                   title (strip-tags title)]]
+                         {:level 1
+                          :title (if (cstr/blank? title) "-" title)
+                          :page (when page (format "%010d" (Integer/parseInt page)))
+                          :anchor anchor}))]
+      ;; without a page nothing can be linked to: report "no table of contents"
+      ;; so that the caller scans the downloaded pages instead
+      (when (some :page entries)
+        entries))))
 
 
 (defn- html-pages
